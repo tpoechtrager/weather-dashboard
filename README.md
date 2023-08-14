@@ -17,8 +17,8 @@ And an HTTP server with PHP and MySQL support for the Frontend
 
 ## Frontend:
 
-* `weather.php`: Weather station dashboard
-* `weather-api.php`: API implementation for the dashboard
+* `weather.php`: Weather station dashboard  
+* `weather-api.php`: API implementation for the dashboard  
 * `weather-stations.json`: A list of weather stations that should be shown in the Dashboard
 
 ## Configuration:
@@ -37,6 +37,10 @@ And an HTTP server with PHP and MySQL support for the Frontend
 ```
 
 in `weather-srv.php` and to `www/weather-stations.json`. The right number is the `sid` (station id). You can choose these number freely to identify your weather stations.
+
+## Database:
+
+![Database layout](db-layout.png)
 
 ## Dashboard:
 
