@@ -1,0 +1,32 @@
+{
+  "weatherStations": [
+      {
+          "sid": "0",
+          "name": "Outside 1: Bresser-7in1"
+      },
+      {
+          "sid": "1",
+          "name": "Outside 2: Bresser-5in1"
+      },
+      {
+          "sid": "5",
+          "id": "49",
+          "name": "Outside 3"
+      },
+      {
+          "sid": "5",
+          "id": "58",
+          "name": "Garden Shed"
+      },
+      {
+          "sid": "2",
+          "id": "8",
+          "name": "Attic"
+      },
+      {
+        "sid": "-24",
+        "id": "-24",
+        "name": "Room"
+    }
+  ]
+}
