@@ -38,7 +38,7 @@ And an HTTP server with PHP and MySQL support for the Frontend
 
 in `weather-srv.php` and to `www/weather-stations.json`. The right number is the `sid` (station id). You can choose these number freely to identify your weather stations.
 
-## Database:
+## MySQL Database layout:
 
 ![Database layout](db-layout.png)
 
