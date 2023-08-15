@@ -24,12 +24,22 @@ try {
     die();
 }
 
-$id = explode("_", isset($_GET['weather-station-id']) ? $_GET['weather-station-id'] : "0");
-if (count($id) == 2) {
-    list($sid, $code) = $id;
-} else {
-    $sid = $id[0];
+// ?weather-station-id=<sid>_<code>_<channel>
+// code and and channel may be omitted or set to '?'
+// ?weather-station-id=0_?_3
+$id = explode('_', isset($_GET['weather-station-id']) ? $_GET['weather-station-id'] : '0');
+$sid = (int)$id[0];
+$code = isset($id[1]) ? $id[1] : NULL;
+$channel = isset($id[2]) ? $id[2] : NULL;
+
+// If the value of code is '?', set it to NULL.
+if ($code === '?') {
     $code = NULL;
+}
+
+// If the value of channel is '?', set it to NULL.
+if ($channel === '?') {
+    $channel = NULL;
 }
 
 $isDaylight = isset($_GET['is_daylight']) ? $_GET['is_daylight'] : null;
@@ -102,7 +112,12 @@ $params = ['sid' => $sid];
 
 if ($code !== NULL) {
     $where .= " AND code = :code";
-    $params['code'] = $code; 
+    $params['code'] = $code;
+}
+
+if ($channel !== NULL) {
+    $where .= " AND channel = :channel";
+    $params['channel'] = $channel;
 }
 
 $filterActive = false; // Initialize the flag for filter activation

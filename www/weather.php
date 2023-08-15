@@ -181,21 +181,17 @@
     
             // Get the select element
             const selectElement = document.getElementById("weather-station-id");
-    
+
             // Create and append options based on the JSON data
             weatherStationsData.weatherStations.forEach(station => {
                 const option = document.createElement("option");
-    
+
                 // Set the value of the option
-                if (station.id) {
-                    option.value = `${station.sid}_${station.id}`;
-                } else {
-                    option.value = station.sid;
-                }
-    
+                option.value = `${station.sid}_${station.id || '?'}_${station.channel || '?'}`;
+                
                 // Set the text content of the option
                 option.textContent = station.name;
-    
+
                 // Append the option to the select element
                 selectElement.appendChild(option);
             });

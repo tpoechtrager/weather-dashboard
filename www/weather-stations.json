@@ -26,7 +26,17 @@
       {
         "sid": "-24",
         "id": "-24",
-        "name": "Room"
-    }
+        "name": "Room 1"
+      },
+      {
+        "sid": "6",
+        "channel": "1",
+        "name": "Living Room"
+      },
+      {
+        "sid": "6",
+        "channel": "2",
+        "name": "Basement"
+      }
   ]
 }

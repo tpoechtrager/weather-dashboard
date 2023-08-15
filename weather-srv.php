@@ -19,6 +19,7 @@ $lastDatabaseWriteTime = time(); // Initialize with the current time
 $dbWriteMinimumRequiredUpdateCount = 2; // Minimum update count required for writing to the database
 
 $dataFieldNames = [
+    'channel',
     'temperature_C',
     'humidity',
     'wind_max_m_s',
@@ -35,6 +36,8 @@ $weatherStationTypes = [
     "Bresser-5in1" => 1,
     "LaCrosse-TX35DTHIT" => 2,
     "LaCrosse-TX141THBv2" => 5,
+    "Nexus-TH" => 6,
+    "TFA-303221" => 7,
     "TFA-Dostmann-AIRCO2NTROL-MINI" => -24
 ];
 
