@@ -34,6 +34,7 @@
         }
 
         #no-data-message {
+            display: none;
             text-align: center;
             font-size: 24px;
             color: #f5f5f5;
@@ -96,7 +97,6 @@
             justify-content: center;
             align-items: center;
         }
-
 
         #loading-text {
             color: #f5f5f5;
@@ -171,6 +171,15 @@
             </select>
         </div>
 
+        <div class="filter-container">
+            <select id="language-selector" style='width: 100%'>
+                <option value="en">EN</option>
+                <option value="de">DE</option>
+                <option value="fr">FR</option>
+                <!-- Add more language options as needed -->
+            </select>
+        </div>
+
         <script>
             // The JSON data representing weather stations
             // Embedded weather-stations.json
@@ -203,12 +212,167 @@
         <p id="loading-text">Loading...</p>
     </div>
 
+    <div id="no-data-message">No data available for selected time frame</div>
+
     <div id="container">
     </div>
 
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/1.33.1/plotly.min.js"
+            integrity="sha512-V0j9LhrK9IMNdFYZqh+IqU4cjo7wdxyHNyH+L0td4HryBuZ7Oq6QxP2/CWr6TituX31+gv5PnolvERuTbz8UNA=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/3.0.5/js.cookie.min.js"
+            integrity="sha512-nlp9/l96/EpjYBx7EP7pGASVXNe80hGhYAUrjeXnu/fyF5Py0/RXav4BBNs7n5Hx1WFhOEOWSAVjGeC3oKxDVQ=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
     <script>
-        const chartConfigs = [
+        const translations = {
+            en: {
+                stationLabel: "Station:",
+                lastDaysLabel: "Last N days:",
+                lastWeeksLabel: "Last N weeks:",
+                lastMonthsLabel: "Last N months:",
+                yearLabel: "Year:",
+                loadingText: "Loading...",
+                noDataMessage: "No data available for selected time frame",
+                anyOption: "Any",
+                temp: "Temperature",
+                humidity: "Humidity",
+                co2: "CO2",
+                light: "Light",
+                average_light: "Average Light",
+                uv: "UV Index",
+                length_of_daylight: "Daylight duration",
+                sunrise: "Sunrise Time",
+                sunset: "Sunset Time",
+                wind: "Wind Gust",
+                wind_avg: "Wind Average",
+                rain: "Rain",
+            },
+            de: {
+                stationLabel: "Station:",
+                lastDaysLabel: "Letzte X Tage:",
+                lastWeeksLabel: "Letzte X Wochen:",
+                lastMonthsLabel: "Letzte X Monate:",
+                yearLabel: "Jahr:",
+                loadingText: "Lade...",
+                noDataMessage: "Keine Daten für den ausgewählten Zeitraum verfügbar",
+                anyOption: "Beliebig",
+                temp: "Temperatur",
+                humidity: "Luftfeuchtigkeit",
+                co2: "CO2",
+                light: "Licht",
+                average_light: "Durchschnittliches Licht",
+                uv: "UV-Index",
+                length_of_daylight: "Tageslichtdauer",
+                sunrise: "Sonnenaufgang",
+                sunset: "Sonnenuntergang",
+                wind: "Windböe",
+                wind_avg: "Durchschnittlicher Wind",
+                rain: "Regen",
+            },
+            fr: {
+                stationLabel: "Station:",
+                lastDaysLabel: "Derniers N jours :",
+                lastWeeksLabel: "Dernières N semaines :",
+                lastMonthsLabel: "Derniers N mois :",
+                yearLabel: "Année :",
+                loadingText: "Chargement...",
+                noDataMessage: "Aucune donnée disponible pour la période sélectionnée",
+                anyOption: "Tout",
+                temp: "Température",
+                humidity: "Humidité",
+                co2: "CO2",
+                light: "Lumière",
+                average_light: "Lumière moyenne",
+                uv: "Indice UV",
+                length_of_daylight: "Durée du jour",
+                sunrise: "Heure de lever du soleil",
+                sunset: "Heure de coucher du soleil",
+                wind: "Rafale de vent",
+                wind_avg: "Vent moyen",
+                rain: "Pluie",
+            },
+        };
+
+        function translateUI(selectedLanguage) {
+            // Update UI elements with translated strings
+            const labelsToTranslate = [
+                { id: 'weather-station-id', label: 'stationLabel' },
+                { id: 'last-days', label: 'lastDaysLabel' },
+                { id: 'last-weeks', label: 'lastWeeksLabel' },
+                { id: 'last-months', label: 'lastMonthsLabel' },
+                { id: 'year', label: 'yearLabel' }
+            ];
+
+            labelsToTranslate.forEach(labelInfo => {
+                const labelElement = document.querySelector(`label[for="${labelInfo.id}"]`);
+                if (labelElement) {
+                    labelElement.textContent = translations[selectedLanguage][labelInfo.label];
+                }
+            });
+
+            // Update the "Any" option in dropdowns
+            const dropdowns = document.querySelectorAll('select'); // Select all <select> elements
+
+            dropdowns.forEach(dropdown => {
+                // Check if the 'Any' option exists and replace its text with the translated version
+                const anyOptionIndex = Array.from(dropdown.options).findIndex(option => option.value === "");
+                if (anyOptionIndex !== -1) {
+                dropdown.options[anyOptionIndex].textContent = translations[selectedLanguage].anyOption;
+                }
+            });
+
+            // Translate chart names dynamically within the chartConfigs loop
+            chartConfigs.forEach(({ key, units, color }) => {
+                chartConfigs.find(config => config.key === key).name = translations[selectedLanguage][key];
+            });
+
+            // Update other UI elements as needed
+            document.getElementById('loading-text').textContent = translations[selectedLanguage].loadingText;
+            document.getElementById('no-data-message').innerHTML = translations[selectedLanguage].noDataMessage;
+        }
+
+        // Define the changeLanguage function
+        function changeLanguage() {
+            const selectedLanguage = document.getElementById("language-selector").value;
+            
+            // Update UI elements with selected language
+            translateUI(selectedLanguage);
+
+            // Set the user's preferred language as a cookie that never expires
+            Cookies.set('userLanguage', selectedLanguage, { expires: new Date(253402300000000) }); // This corresponds to year 9999
+
+            // Redraw charts on language change
+            applyFilters();
+        }
+
+        // Call the translateUI function on page load to set the initial language
+        window.addEventListener('DOMContentLoaded', function() {
+            // Add event listener to the language selector dropdown
+            document.getElementById("language-selector").addEventListener("change", changeLanguage);
+
+            // Get the user's preferred language from browser settings, or use a default value
+            const userPreferredLanguage = Cookies.get('userLanguage') || navigator.language.split('-')[0] || 'en';
+
+            if (userPreferredLanguage == 'en') {
+                // English is the default language. Nothing to do.
+                return;
+            }
+
+            if (translations[userPreferredLanguage] === undefined) {
+                userPreferredLanguage = 'en';
+            }
+
+            // Set the initial language in the dropdown
+            document.getElementById('language-selector').value = userPreferredLanguage;
+
+            // Translate the UI based on the initial language
+            translateUI(userPreferredLanguage);
+        });
+    </script>
+    
+    <script>
+        chartConfigs = [
             { key: 'temp', name: 'Temperature', units: '°C', color: 'rgb(255, 99, 132)' },
             { key: 'humidity', name: 'Humidity', units: '%', color: 'rgb(54, 162, 235)' },
             { key: 'co2', name: 'co2', units: 'ppm', color: 'rgb(54, 162, 235)' },
@@ -379,11 +543,14 @@
                         container.removeChild(container.firstChild);
                     }
 
+                    const noDataMessageElement = document.getElementById('no-data-message');
+
                     // Check if data is available
                     if (data.length === 0) {
-                        const container = document.getElementById('container');
-                        container.innerHTML = `<div id="no-data-message">No data available for selected time frame</div>`; // Display the centered message
+                        if (noDataMessageElement) noDataMessageElement.style.display = 'flex';
                     } else {
+                        if (noDataMessageElement) noDataMessageElement.style.display = 'none';
+
                         const dayLightData = calculateDaylightData(data);
 
                         chartConfigs.forEach(({ key, name, units, color }) => {
