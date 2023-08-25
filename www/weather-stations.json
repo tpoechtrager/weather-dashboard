@@ -1,27 +1,36 @@
 {
   "weatherStations": [
       {
-          "sid": "0",
-          "name": "Outside 1: Bresser-7in1"
+        "sid": "0",
+        "name": "Outside 1: Bresser-7in1"
       },
       {
-          "sid": "1",
-          "name": "Outside 2: Bresser-5in1"
+        "sid": "1",
+        "name": "Outside 2: Bresser-5in1"
       },
       {
-          "sid": "5",
-          "id": "49",
-          "name": "Outside 3"
+        "sid": "5",
+        "id": "49",
+        "ignore_humidity": "1",
+        "name": "Outside 3"
       },
       {
-          "sid": "5",
-          "id": "58",
-          "name": "Garden Shed"
+        "sid": "6",
+        "id": "165",
+        "begin": "2023-08-24 21:20:00",
+        "name": "Outside 4"
       },
       {
-          "sid": "2",
-          "id": "8",
-          "name": "Attic"
+        "sid": "5",
+        "id": "58",
+        "ignore_humidity": "1",
+        "name": "Garden Shed"
+      },
+      {
+        "sid": "2",
+        "id": "8",
+        "ignore_humidity": "1",
+        "name": "Attic"
       },
       {
         "sid": "-24",
@@ -30,11 +39,13 @@
       },
       {
         "sid": "6",
+        "id": "1",
         "channel": "1",
         "name": "Living Room"
       },
       {
         "sid": "6",
+        "id": "22",
         "channel": "2",
         "name": "Basement"
       }

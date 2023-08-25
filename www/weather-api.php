@@ -1,6 +1,6 @@
 <?php
-// Set memory limit to 1GB (1024 MB)
-ini_set('memory_limit', '1024M');
+// Set memory limit to 2048M
+ini_set('memory_limit', '2048M');
 
 // Set maximum execution time to 5 minutes (300 seconds)
 set_time_limit(300);
@@ -107,7 +107,7 @@ $lastMonths = isset($_GET['last-months']) ? (int)$_GET['last-months'] : null;
 $lastHours = isset($_GET['last-hours']) ? (int)$_GET['last-hours'] : null;
 $year = isset($_GET['year']) ? (int)$_GET['year'] : null;
 
-$where = "WHERE sid = :sid AND time > '2020-01-01' AND (humidity IS NULL OR humidity <= 100) AND (temp IS NULL OR temp <= 90)";
+$where = "WHERE sid = :sid AND time > '2020-01-01' AND (humidity IS NULL OR humidity <= 100) AND (temp IS NULL OR temp <= 90) AND (co2 IS NULL OR co2 != 0)";
 $params = ['sid' => $sid];
 
 if ($code !== NULL) {
@@ -119,6 +119,48 @@ if ($channel !== NULL) {
     $where .= " AND channel = :channel";
     $params['channel'] = $channel;
 }
+
+// Path to the JSON file
+$jsonFilePath = 'weather-stations.json';
+
+// Define a variable to keep track of whether to ignore humidity or not
+$ignoreHumidity = false;
+
+// Check if the JSON file exists
+if (file_exists($jsonFilePath)) {
+    // Load weather stations from JSON
+    $weatherStationsJson = file_get_contents($jsonFilePath);
+    $weatherStations = json_decode($weatherStationsJson, true);
+
+    // Loop through the weather stations to find the one with the matching sid
+    foreach ($weatherStations['weatherStations'] as $station) {
+        if ($station['sid'] == $sid &&
+            (!isset($station['code']) || $station['code'] == $code) && 
+            (!isset($station['channel']) || $station['channel'] == $channel)) {
+            // If "begin" exists, add the condition
+            if (isset($station['begin'])) {
+                $where .= " AND time >= :beginDate";
+                $params['beginDate'] = $station['begin'];
+                $filterActive = true;
+            }
+
+            // If "end" exists, add the condition
+            if (isset($station['end'])) {
+                $where .= " AND time <= :endDate";
+                $params['endDate'] = $station['end'];
+                $filterActive = true;
+            }
+
+            if (isset($station['ignore_humidity']) &&
+                ($station['ignore_humidity'] == "1" || $station['ignore_humidity'] === true)) {
+                $ignoreHumidity = true; // Mark the flag to ignore humidity
+            }
+
+            break; // No need to continue searching, we found the right station
+        }
+    }
+}
+
 
 $filterActive = false; // Initialize the flag for filter activation
 
@@ -244,6 +286,13 @@ if (file_exists('auth.php')) {
         foreach ($rows as $index => $row) {
             unset($rows[$index]['co2']);
         }
+    }
+}
+
+// If ignoreHumidity is true, unset the humidity key from each result
+if ($ignoreHumidity) {
+    foreach ($rows as $index => $row) {
+        unset($rows[$index]['humidity']);
     }
 }
 
