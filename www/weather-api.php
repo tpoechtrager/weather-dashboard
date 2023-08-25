@@ -32,6 +32,9 @@ $sid = (int)$id[0];
 $code = isset($id[1]) ? $id[1] : NULL;
 $channel = isset($id[2]) ? $id[2] : NULL;
 
+// or station hash
+$stationHash = isset($_GET['weather-station-hash']) ? $_GET['weather-station-hash'] : NULL;
+
 // If the value of code is '?', set it to NULL.
 if ($code === '?') {
     $code = NULL;
@@ -110,49 +113,46 @@ $year = isset($_GET['year']) ? (int)$_GET['year'] : null;
 $filterActive = false; // Initialize the flag for filter activation
 
 $where = "WHERE sid = :sid AND time > '2020-01-01'";
-$params = ['sid' => $sid];
+$params = [];
 
-if ($code !== NULL) {
-    $where .= " AND code = :code";
-    $params['code'] = $code;
-}
-
-if ($channel !== NULL) {
-    $where .= " AND channel = :channel";
-    $params['channel'] = $channel;
-}
+$ignoreHumidity = false;
+$noImplausibleDataFilter = false;
 
 // Path to the JSON file
 $jsonFilePath = 'weather-stations.json';
 
-// Define a variable to keep track of whether to ignore humidity or not
-$ignoreHumidity = false;
-
-$noImplausibleDataFilter = false;
-
-// Check if the JSON file exists
-if (file_exists($jsonFilePath)) {
+if ($stationHash !== null && file_exists($jsonFilePath)) {
     // Load weather stations from JSON
     $weatherStationsJson = file_get_contents($jsonFilePath);
     $weatherStations = json_decode($weatherStationsJson, true);
 
+    $weatherStationFound = false;
+
     // Loop through the weather stations to find the one with the matching sid
     foreach ($weatherStations['weatherStations'] as $station) {
-        if ($station['sid'] == $sid &&
-            (!isset($station['code']) || $station['code'] == $code) && 
-            (!isset($station['channel']) || $station['channel'] == $channel)) {
+        if ($stationHash == hash('sha256', serialize($station))) {
+            if (isset($station['sid'])) {
+                $sid = $station['sid'];
+            }
+
+            if (isset($station['code'])) {
+                $code = $station['code'];
+            }
+
+            if (isset($station['channel'])) {
+                $channel = $station['channel'];
+            }
+
             // If "begin" exists, add the condition
             if (isset($station['begin'])) {
                 $where .= " AND time >= :beginDate";
                 $params['beginDate'] = $station['begin'];
-                $filterActive = true;
             }
 
             // If "end" exists, add the condition
             if (isset($station['end'])) {
                 $where .= " AND time <= :endDate";
                 $params['endDate'] = $station['end'];
-                $filterActive = true;
             }
 
             if (isset($station['ignore_humidity']) &&
@@ -166,9 +166,28 @@ if (file_exists($jsonFilePath)) {
                 $noImplausibleDataFilter = true;
             }
 
+            $weatherStationFound = true;
             break; // No need to continue searching, we found the right station
         }
     }
+
+    if (!$weatherStationFound) {
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Weather station with hash \''.$stationHash.'\' not found.']);
+        die();
+    }
+}
+
+$params['sid'] = $sid;
+
+if ($code !== NULL) {
+    $where .= " AND code = :code";
+    $params['code'] = $code;
+}
+
+if ($channel !== NULL) {
+    $where .= " AND channel = :channel";
+    $params['channel'] = $channel;
 }
 
 if ($startDate) {
@@ -325,7 +344,7 @@ function removeRowsWithImplausibleChanges(&$rows) {
 
                 // If the difference is more than 10 for either value, unset the row
                 if (($humidityDifference !== null && $humidityDifference > 10) || 
-                    ($temperatureDifference !== null && $temperatureDifference > 10)) {
+                    ($temperatureDifference !== null && $temperatureDifference > 5)) {
                     unset($rows[$index]);
                     // Set the flag to reindex the array later
                     $reindexRequired = true;

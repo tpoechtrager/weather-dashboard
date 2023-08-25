@@ -117,8 +117,8 @@
     <!-- Filter boxes -->
     <div id="filterBox">
         <div class="filter-container">
-            <label for="weather-station-id">Station:</label>
-            <select id="weather-station-id" style='width: 100%'>
+            <label for="weather-station-hash">Station:</label>
+            <select id="weather-station-hash" style='width: 100%'>
             </select>
         </div>
 
@@ -183,20 +183,32 @@
         <script>
             // The JSON data representing weather stations
             // Embedded weather-stations.json
-            const weatherStationsJSON = `<?php echo json_encode(json_decode(file_get_contents('weather-stations.json')), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?>`;
+            const weatherStationsJSON = `<?php
+                $weatherData = json_decode(file_get_contents('weather-stations.json'), true); // Decode as an associative array
+
+                // Iterate through each weather station by reference
+                foreach ($weatherData['weatherStations'] as &$weatherStation) {
+                    $hash = hash('sha256', serialize($weatherStation));
+                    // Add the hash property to the weather station
+                    $weatherStation['hash'] = $hash;
+                }
+
+                // Re-encode the weather stations with the hash property
+                echo json_encode($weatherData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            ?>`;
     
             // Parse the JSON data
             const weatherStationsData = JSON.parse(weatherStationsJSON);
     
             // Get the select element
-            const selectElement = document.getElementById("weather-station-id");
+            const selectElement = document.getElementById("weather-station-hash");
 
             // Create and append options based on the JSON data
             weatherStationsData.weatherStations.forEach(station => {
                 const option = document.createElement("option");
 
                 // Set the value of the option
-                option.value = `${station.sid}_${station.id || '?'}_${station.channel || '?'}`;
+                option.value = station.hash;
                 
                 // Set the text content of the option
                 option.textContent = station.name;
@@ -297,7 +309,7 @@
         function translateUI(selectedLanguage) {
             // Update UI elements with translated strings
             const labelsToTranslate = [
-                { id: 'weather-station-id', label: 'stationLabel' },
+                { id: 'weather-station-hash', label: 'stationLabel' },
                 { id: 'last-days', label: 'lastDaysLabel' },
                 { id: 'last-weeks', label: 'lastWeeksLabel' },
                 { id: 'last-months', label: 'lastMonthsLabel' },
@@ -527,14 +539,14 @@
             // Show the loading screen with a delay of 1 second
             showLoadingWithTimeout();
 
-            const weatherStationId = document.getElementById('weather-station-id').value;
+            const weatherStationHash = document.getElementById('weather-station-hash').value;
             const lastDays = document.getElementById('last-days').value;
             const lastWeeks = document.getElementById('last-weeks').value;
             const lastMonths = document.getElementById('last-months').value;
             const year = document.getElementById('year').value || ""; // Get the selected year
 
             // Fetch data with the applied filters
-            fetch(`weather-api.php?weather-station-id=${weatherStationId}&last-days=${lastDays}&last-weeks=${lastWeeks}&last-months=${lastMonths}&year=${year}`)
+            fetch(`weather-api.php?weather-station-hash=${weatherStationHash}&last-days=${lastDays}&last-weeks=${lastWeeks}&last-months=${lastMonths}&year=${year}`)
                 .then(response => response.json())
                 .then(data => {
                     // Remove existing charts
@@ -628,15 +640,6 @@
                             }
 
                             if (values.some(value => value !== null)) {
-                                // If the left weather station ID is 5, skip the humidity chart
-                                const stationIdParts = weatherStationId.split('_');
-                                if (stationIdParts[0] === '5') {
-                                    if (key === 'humidity') {
-                                        // Not shown because the data is broken. This sensor is not even supposed to support humidity.
-                                        return;
-                                    }
-                                }
-
                                 // Convert wind speed from m/s to km/h
                                 if (units === 'm/s' && (key === 'wind' || key === 'wind_avg')) {
                                     values.forEach((value, index) => {
@@ -725,7 +728,7 @@
         }
 
         // Add event listeners to all filter inputs to call applyFiltersOnChange on change
-        document.getElementById('weather-station-id').addEventListener('change', applyFilters);
+        document.getElementById('weather-station-hash').addEventListener('change', applyFilters);
         document.getElementById('last-days').addEventListener('change', applyFilters);
         document.getElementById('last-weeks').addEventListener('change', applyFilters);
         document.getElementById('last-months').addEventListener('change', applyFilters);
