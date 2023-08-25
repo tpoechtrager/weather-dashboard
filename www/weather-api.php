@@ -107,7 +107,9 @@ $lastMonths = isset($_GET['last-months']) ? (int)$_GET['last-months'] : null;
 $lastHours = isset($_GET['last-hours']) ? (int)$_GET['last-hours'] : null;
 $year = isset($_GET['year']) ? (int)$_GET['year'] : null;
 
-$where = "WHERE sid = :sid AND time > '2020-01-01' AND (humidity IS NULL OR humidity <= 100) AND (temp IS NULL OR temp <= 90) AND (co2 IS NULL OR co2 != 0)";
+$filterActive = false; // Initialize the flag for filter activation
+
+$where = "WHERE sid = :sid AND time > '2020-01-01'";
 $params = ['sid' => $sid];
 
 if ($code !== NULL) {
@@ -125,6 +127,8 @@ $jsonFilePath = 'weather-stations.json';
 
 // Define a variable to keep track of whether to ignore humidity or not
 $ignoreHumidity = false;
+
+$noImplausibleDataFilter = false;
 
 // Check if the JSON file exists
 if (file_exists($jsonFilePath)) {
@@ -156,13 +160,16 @@ if (file_exists($jsonFilePath)) {
                 $ignoreHumidity = true; // Mark the flag to ignore humidity
             }
 
+            if (isset($station['disable_implausible_data_filter']) &&
+                ($station['disable_implausible_data_filter'] == "1" ||
+                 $station['disable_implausible_data_filter'] === true)) {
+                $noImplausibleDataFilter = true;
+            }
+
             break; // No need to continue searching, we found the right station
         }
     }
 }
-
-
-$filterActive = false; // Initialize the flag for filter activation
 
 if ($startDate) {
     $where .= " AND time >= :startDate";
@@ -229,13 +236,33 @@ if ($totalRows > $maxRows) {
     $params['thinningFactor'] = $thinningFactor;
 }
 
-$sql = "SELECT time, temp, humidity, co2, wind, wind_avg, wind_dir, rain, light, uv FROM data $where";
+
+$needUnixTimestamp = false;
+
+if (!$noImplausibleDataFilter) {
+    $needUnixTimestamp = true;
+}
+
+$additionalFields = [];
+
+if ($needUnixTimestamp) {
+    $additionalFields[] = "UNIX_TIMESTAMP(time) AS unix_time";
+}
+
+$additionalFieldsSql = "";
+
+if (!empty($additionalFields)) {
+    $additionalFieldsSql = ', '.implode($additionalFields);
+}
+
+
+$sql = "SELECT time, temp, humidity, co2, wind, wind_avg, wind_dir, rain, light, uv $additionalFieldsSql FROM data $where";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-function removeNullKeysAcrossAllRows($rows) {
+function removeNullKeysAcrossAllRows(&$rows) {
     // Check if there's at least one row. If not, return the array as is
     if (empty($rows)) {
         return $rows;
@@ -276,7 +303,47 @@ function removeNullKeysAcrossAllRows($rows) {
     return $rows;
 }
 
-$rows = removeNullKeysAcrossAllRows($rows);
+function removeRowsWithImplausibleChanges(&$rows) {
+    $reindexRequired = false; // Initialize the flag to check if re-indexing is required
+    $previousRow = null;
+    $previousTimestamp = null;
+
+    foreach ($rows as $index => $row) {
+        $currentTimestamp = $row['unix_time'];
+
+        if ($previousRow !== null) {
+            // Check if the previous value is older than 10 minutes
+            if (($currentTimestamp - $previousTimestamp) > 600) {
+                $previousRow = null;
+                $previousTimestamp = null;
+            } else {
+                // Calculate differences
+                $humidityDifference = ($row['humidity'] !== null && $previousRow['humidity'] !== null)
+                    ? abs($row['humidity'] - $previousRow['humidity']) : null;
+                $temperatureDifference = ($row['temp'] !== null && $previousRow['temp'] !== null)
+                    ? abs($row['temp'] - $previousRow['temp']) : null;
+
+                // If the difference is more than 10 for either value, unset the row
+                if (($humidityDifference !== null && $humidityDifference > 10) || 
+                    ($temperatureDifference !== null && $temperatureDifference > 10)) {
+                    unset($rows[$index]);
+                    // Set the flag to reindex the array later
+                    $reindexRequired = true;
+                    continue;
+                }
+            }
+        }
+
+        // Update the previous row and timestamp
+        $previousRow = $row;
+        $previousTimestamp = $currentTimestamp;
+    }
+
+    // Re-index the array to maintain continuous indexing if required
+    if ($reindexRequired) {
+        $rows = array_values($rows);
+    }
+}
 
 if (file_exists('auth.php')) {
     include 'auth.php';
@@ -294,35 +361,17 @@ if ($ignoreHumidity) {
     foreach ($rows as $index => $row) {
         unset($rows[$index]['humidity']);
     }
-} else {
-    $reindexRequired = false;
+}
 
-    $previousHumidity = null;
+removeNullKeysAcrossAllRows($rows);
+
+if (!$noImplausibleDataFilter) {
+    removeRowsWithImplausibleChanges($rows);
+}
+
+if ($needUnixTimestamp) {
     foreach ($rows as $index => $row) {
-        // Get the current humidity value
-        $currentHumidity = $row['humidity'];
-
-        // Check if both the current and previous humidity values are not NULL before comparing
-        if ($currentHumidity !== null && $previousHumidity !== null) {
-            // Calculate the absolute difference between the current and previous humidity values
-            $difference = abs($currentHumidity - $previousHumidity);
-
-            if ($difference > 10) {
-                // If the difference is more than 10, unset the row
-                unset($rows[$index]);
-                // Set the flag to reindex the array later
-                $reindexRequired = true;
-                continue;
-            }
-        }
-
-        // Update the previous humidity value
-        $previousHumidity = $currentHumidity;
-    }
-
-    // Re-index the array to maintain continuous indexing if required
-    if ($reindexRequired) {
-        $rows = array_values($rows);
+        unset($rows[$index]['unix_time']);
     }
 }
 

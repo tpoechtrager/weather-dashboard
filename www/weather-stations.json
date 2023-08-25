@@ -2,10 +2,12 @@
   "weatherStations": [
       {
         "sid": "0",
+        "disable_implausible_data_filter": 1,
         "name": "Outside 1: Bresser-7in1"
       },
       {
         "sid": "1",
+        "disable_implausible_data_filter": 1,
         "name": "Outside 2: Bresser-5in1"
       },
       {
