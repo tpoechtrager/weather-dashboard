@@ -289,10 +289,40 @@ if (file_exists('auth.php')) {
     }
 }
 
-// If ignoreHumidity is true, unset the humidity key from each result
 if ($ignoreHumidity) {
+    // If ignoreHumidity is true, simply remove the humidity key from each row
     foreach ($rows as $index => $row) {
         unset($rows[$index]['humidity']);
+    }
+} else {
+    $reindexRequired = false;
+
+    $previousHumidity = null;
+    foreach ($rows as $index => $row) {
+        // Get the current humidity value
+        $currentHumidity = $row['humidity'];
+
+        // Check if both the current and previous humidity values are not NULL before comparing
+        if ($currentHumidity !== null && $previousHumidity !== null) {
+            // Calculate the absolute difference between the current and previous humidity values
+            $difference = abs($currentHumidity - $previousHumidity);
+
+            if ($difference > 10) {
+                // If the difference is more than 10, unset the row
+                unset($rows[$index]);
+                // Set the flag to reindex the array later
+                $reindexRequired = true;
+                continue;
+            }
+        }
+
+        // Update the previous humidity value
+        $previousHumidity = $currentHumidity;
+    }
+
+    // Re-index the array to maintain continuous indexing if required
+    if ($reindexRequired) {
+        $rows = array_values($rows);
     }
 }
 
