@@ -220,8 +220,16 @@ function outputMessage($message)
 // Main loop
 while (true)
 {
-    if ($rtlProcess)
-        pclose($rtlProcess);
+    if ($rtlProcess) {
+        if (is_resource($rtlProcess)) {
+            $status = proc_get_status($rtlProcess);
+            if ($status['running']) {
+                printf("KILL!\n");
+                posix_kill($status['pid'], SIGKILL);
+            }
+            proc_close($rtlProcess);
+        }
+    }
 
     // Get required configuration parameter
     $serialNumber = getConfig('weather_sdr_sn', true);

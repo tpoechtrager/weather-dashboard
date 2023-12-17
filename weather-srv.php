@@ -151,6 +151,7 @@ function processWeatherStationData($decodedData, $receiverHost)
     global $weatherStations;
 
     if ($decodedData !== null && isset($decodedData["model"]) && isset($decodedData["id"])) {
+        $decodedData["time"] = time();
         $modelId = $decodedData["model"] . "_" . $decodedData["id"];
 
         if (isset($weatherStations[$modelId])) {
