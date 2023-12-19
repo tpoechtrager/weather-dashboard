@@ -222,12 +222,12 @@ while (true)
 {
     if ($rtlProcess) {
         if (is_resource($rtlProcess)) {
-            $status = proc_get_status($rtlProcess);
-            if ($status['running']) {
-                printf("KILL!\n");
-                posix_kill($status['pid'], SIGKILL);
+            $res = trim(exec('ps -eo pid,ppid |grep "'.getmypid().'" |head -n2 |tail -n1'));
+            if (preg_match('~^(\d+)\s+(\d+)$~', $res, $pid) !== 0 && (int) $pid[2] === getmypid())
+            {
+                posix_kill((int) $pid[1], SIGKILL);
             }
-            proc_close($rtlProcess);
+            pclose($rtlProcess);
         }
     }
 
