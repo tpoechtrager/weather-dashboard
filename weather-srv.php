@@ -50,10 +50,12 @@ class WeatherStation
     private $receiverHost;
     private $type;
     private $dataUpdates; // Variable to store the number of data updates
+    private $receiverHosts; // Array indexed by host with timestamp values
 
     public function __construct($data, $receiverHost)
     {
         $this->dataUpdates = 0; // Initialize the counter to 0
+        $this->receiverHosts = []; // Initialize the receiverHosts array
         $this->updateData($data, $receiverHost);
     }
 
@@ -82,6 +84,11 @@ class WeatherStation
         return $this->dataUpdates;
     }
 
+    public function getReceiverHosts()
+    {
+        return $this->receiverHosts;
+    }
+
     public function updateData($data, $receiverHost)
     {
         global $weatherStationTypes, $weatherStationTypeUnknown;
@@ -99,6 +106,9 @@ class WeatherStation
 
         $this->lastUpdate = time();
         $this->dataUpdates++; // Increment the data update counter
+
+        // Update receiverHosts array with the current timestamp
+        $this->receiverHosts[$receiverHost] = $this->lastUpdate;
     }
 }
 
@@ -178,6 +188,7 @@ function handleInfoRequest($data, $clientHost, $clientPort)
                 if ($sensorData) $sensorData .= '|';
                 $sensorData .= "$key:$val";
             }
+            $sensorData .= "|hosts:".base64_encode(json_encode($weatherStation->getReceiverHosts()));
             if ($infoDataBuffer) $infoDataBuffer .= "\n";
             $infoDataBuffer .= $sensorData;
         }

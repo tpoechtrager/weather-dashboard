@@ -18,6 +18,35 @@ $weatherStations = [];
 initializeUdpSocket();
 
 /**
+ * Terminates all subprocesses spawned by the current PHP script and then
+ * ungracefully terminates the script itself.
+ * It uses the 'ps' command to find subprocess PIDs based on the parent PID.
+ */
+function terminateScriptAndSubprocesses() {
+    $parentPid = getmypid();
+
+    // Function to recursively kill a process and its subprocesses
+    $killTree = function($pid) use (&$killTree) {
+        $command = "ps -o pid --no-headers --ppid $pid";
+        $childPIDs = shell_exec($command);
+        $pids = explode("\n", trim($childPIDs));
+
+        foreach ($pids as $childPid) {
+            if (is_numeric($childPid)) {
+                $killTree((int)$childPid);
+            }
+        }
+
+        posix_kill($pid, SIGKILL);
+    };
+
+    // Kill all subprocesses of the script
+    $killTree($parentPid);
+
+    // The script itself will be killed as part of the process tree
+}
+
+/**
  * Initialize the UDP socket.
  */
 function initializeUdpSocket()
@@ -94,9 +123,10 @@ function processRtlData()
     {
         // Check if rtlProcess is still running
         $rtlProcessMeta = stream_get_meta_data($rtlProcess);
-        if ($rtlProcessMeta['eof']) {
-            outputMessage("Error: rtl_433 process terminated unexpectedly. Restarting the process...");
-            return;
+        if ($rtlProcessMeta['eof'])
+        {
+            outputMessage("Error: rtl_433 process terminated unexpectedly.");
+            terminateScriptAndSubprocesses();
         }
 
         // Implement stream_select
@@ -130,8 +160,8 @@ function processRtlData()
         $now = time();
         if ($now - $lastDataReceivedTime >= $timeLimit)
         {
-            outputMessage("Error: No data received for $timeLimit seconds. Restarting rtl_433 process...");
-            return; // Restart the rtl_433 process
+            outputMessage("Error: No data received for $timeLimit seconds.");
+            terminateScriptAndSubprocesses();
         }
 
         // Print weather station statistics every minute
@@ -217,19 +247,9 @@ function outputMessage($message)
     echo "[$dateTime] $message\n";
 }
 
-// Main loop
-while (true)
+function main()
 {
-    if ($rtlProcess) {
-        if (is_resource($rtlProcess)) {
-            $res = trim(exec('ps -eo pid,ppid |grep "'.getmypid().'" |head -n2 |tail -n1'));
-            if (preg_match('~^(\d+)\s+(\d+)$~', $res, $pid) !== 0 && (int) $pid[2] === getmypid())
-            {
-                posix_kill((int) $pid[1], SIGKILL);
-            }
-            pclose($rtlProcess);
-        }
-    }
+    global $rtlProcess;
 
     // Get required configuration parameter
     $serialNumber = getConfig('weather_sdr_sn', true);
@@ -265,7 +285,6 @@ while (true)
         stream_set_blocking($rtlProcess, FALSE);
         processRtlData();
     }
-
-    // Wait for 5 seconds before starting the rtl_433 process again
-    sleep(5);
 }
+
+main();
